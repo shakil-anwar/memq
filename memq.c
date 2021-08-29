@@ -40,12 +40,16 @@ void memqUnlockBus(struct memq_t *memq);
 //This function begin memq pointers and initialie valiable from user object structure
 void memqBegin(struct memq_t *memq,uint32_t baseAddr, uint32_t packetLen, uint32_t totalPacket)
 {
-  memq->_baseAddr = baseAddr;
-  memq->_lastAddr = baseAddr + packetLen * totalPacket;
-  memq->_packetLen = packetLen;
-  memq->_ptrEventCounter = 0;
-  memq->_disableOthers = NULL;
-  memq->_enableOthers = NULL;
+  if (memq != NULL)
+  {
+    memq->_baseAddr = baseAddr;
+    memq->_lastAddr = baseAddr + packetLen * totalPacket;
+    memq->_packetLen = packetLen;
+    memq->_ptrEventCounter = 0;
+    memq->_disableOthers = NULL;
+    memq->_enableOthers = NULL;
+  }
+  
 
   // #if defined(MEMQ_DEBUG)
   //   SerialPrintF(P("Memq Start : "));
@@ -83,6 +87,7 @@ void memqSetMemPtr(struct memq_t *memq, ringFun_t reader, ringFun_t writer, uint
   memq->_ptrRead = reader;
   memq->_ptrWrite = writer;
   memq->_ptrRead(&(memq->ringPtr));
+  memq->ringPtr._tail = memq->ringPtr._saveTail;
   if(memq->ringPtr._head > memq->_lastAddr)
   {
     memqReset(memq);
@@ -104,7 +109,8 @@ void memqPrintBeginLog(struct memq_t *memq)
 	SerialPrintF(P("MEMQ->BEGIN:"));SerialPrintU32(memq->_baseAddr);
   	SerialPrintF(P("|End:"));SerialPrintU32(memq->_lastAddr);
   	SerialPrintF(P("|H:")); SerialPrintU32(memq->ringPtr._head);
-    SerialPrintF(P("|T:")); SerialPrintlnU32(memq->ringPtr._tail);
+    SerialPrintF(P("|T:")); SerialPrintU32(memq->ringPtr._tail);
+    SerialPrintF(P("|A:")); SerialPrintlnU32(memq->ringPtr._saveTail);
 }
 
 //Where there are multiple spi devices in memory spi bus, The bus needs to lock before flash read or write operation, 
@@ -175,6 +181,7 @@ void memqReset(struct memq_t *memq)
   //erase ringeeprom
   memq->ringPtr._head = memq->_baseAddr;
   memq->ringPtr._tail = memq->_baseAddr;
+  memq->ringPtr._saveTail = memq->_baseAddr;
   memq->ringPtr.willEraseAddr = memq->_baseAddr;
   memq->ringPtr.qState = RESET;
   memq->ringPtr._isLock = false;
