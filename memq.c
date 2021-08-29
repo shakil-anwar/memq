@@ -87,7 +87,9 @@ void memqSetMemPtr(struct memq_t *memq, ringFun_t reader, ringFun_t writer, uint
   memq->_ptrRead = reader;
   memq->_ptrWrite = writer;
   memq->_ptrRead(&(memq->ringPtr));
+#if defined (BOARD_MEGA1284_V010)
   memq->ringPtr._tail = memq->ringPtr._saveTail;
+#endif
   if(memq->ringPtr._head > memq->_lastAddr)
   {
     memqReset(memq);
