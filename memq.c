@@ -33,8 +33,7 @@ void memqPrintReadLog( struct memq_t *memq,struct memqReadLog_t *log);
 void memqPrintBeginLog(struct memq_t *memq);
 
 uint8_t log2base(uint16_t n);
-void memqLockBus(struct memq_t *memq);
-void memqUnlockBus(struct memq_t *memq);
+
 
 
 //This function begin memq pointers and initialie valiable from user object structure
@@ -87,6 +86,7 @@ void memqSetMemPtr(struct memq_t *memq, ringFun_t reader, ringFun_t writer, uint
   memq->_ptrRead = reader;
   memq->_ptrWrite = writer;
   memq->_ptrRead(&(memq->ringPtr));
+  memq->_maxPtrEvent = maxPtrEvent;
 #if defined (BOARD_MEGA1284_V010)
   memq->ringPtr._tail = memq->ringPtr._saveTail;
 #endif
@@ -94,7 +94,29 @@ void memqSetMemPtr(struct memq_t *memq, ringFun_t reader, ringFun_t writer, uint
   {
     memqReset(memq);
   }
-  memq->_maxPtrEvent = maxPtrEvent;
+  uint16_t headCount = 0;
+  uint8_t data = 0;
+  uint32_t readAddr = 0; 
+  // SerialPrintF(P("|H:")); SerialPrintlnU32(memq->ringPtr._head);
+  memqLockBus(memq);
+  if(memq->_memReader)
+  {
+    do
+    {
+      readAddr = memq->ringPtr._head + headCount * memq->_packetLen;
+      if (memq->ringPtr._head >= memq->_lastAddr)
+      {
+        memq->ringPtr._head = memq->_baseAddr;
+        // memq->_ptrWrite(&(memq->ringPtr)); //saving pointer in edge conditions
+      }
+      memq->_memReader(readAddr,&data,1);
+      headCount++;
+    } while (data != 255);
+  }
+  memqUnlockBus(memq);
+
+  memq->ringPtr._head = memq->ringPtr._head + (headCount-1) *memq->_packetLen;
+  // SerialPrintF(P("|H:")); SerialPrintlnU32(memq->ringPtr._head);
 // #if defined(MEMQ_DEBUG)
 //   SerialPrintF(P("memq RingPtr Head : "));
 //   SerialPrintU32(memq->ringPtr._head);

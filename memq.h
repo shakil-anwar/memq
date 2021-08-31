@@ -76,6 +76,8 @@ uint32_t memqAvailable(struct memq_t *memq);
 bool memqIsLock(struct memq_t *memq);
 void memqPrintLog(struct memq_t *memq);
 
+void memqLockBus(struct memq_t *memq);
+void memqUnlockBus(struct memq_t *memq);
 
 
 #ifdef __cplusplus 
