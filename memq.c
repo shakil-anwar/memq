@@ -87,9 +87,6 @@ void memqSetMemPtr(struct memq_t *memq, ringFun_t reader, ringFun_t writer, uint
   memq->_ptrWrite = writer;
   memq->_ptrRead(&(memq->ringPtr));
   memq->_maxPtrEvent = maxPtrEvent;
-#if defined (BOARD_MEGA1284_V010)
-  memq->ringPtr._tail = memq->ringPtr._saveTail;
-#endif
   if(memq->ringPtr._head > memq->_lastAddr)
   {
     memqReset(memq);
@@ -124,6 +121,9 @@ void memqSetMemPtr(struct memq_t *memq, ringFun_t reader, ringFun_t writer, uint
 //   SerialPrintlnU32(memq->ringPtr._tail);
 // #endif
   memqPrintBeginLog(memq);
+#if defined (BOARD_MEGA1284_V010)
+  memq->ringPtr._tail = memq->ringPtr._saveTail;
+#endif
 }
 
 
@@ -306,7 +306,11 @@ uint8_t *memqRead(struct memq_t *memq, uint8_t *buf)
         memqReadLog.isLastBlobErased = true;
         memqReadLog.isBlobErased = false;
       }
+#if defined (BOARD_MEGA1284_V010)
+      else if (memq->ringPtr._saveTail >= (memq->ringPtr.willEraseAddr + memq->_blobSize)) //4 is blob size
+#else
       else if (memq->ringPtr._tail >= (memq->ringPtr.willEraseAddr + memq->_blobSize)) //4 is blob size
+#endif
       {
         memqLockBus(memq);
         memq->_memBlobEraser(memq->ringPtr.willEraseAddr, memq->_blobSize);
