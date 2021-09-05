@@ -15,7 +15,7 @@ data_t readBuf;//buffer for reading one sample
 
 
 memqPtr_t ring;
-struct memq_t *memq;
+struct memq_t memq;
 
 void setup()
 {
@@ -27,13 +27,22 @@ void setup()
   Data.val1 = 0;
   Data.val2 = 1;
   //  memq = memq_create(0, sizeof(uint16_t), sizeof(data) / sizeof(uint16_t));
-  memq = memqNew(0, sizeof(data_t), 8);
-  memq -> setMemory(memq, ramReader, ramWriter, ramEraser, 4);
-  memq -> setPointer(memq, ringptrRead, ringptrWrite,10);
-  memq -> attachBusSafety(memq, enableOthersOnbus,disableOthersOnbus);
+//  memq = memqNew(0, sizeof(data_t), 8);
+//  memq -> setMemory(memq, ramReader, ramWriter, ramEraser, 4);
+//  memq -> setPointer(memq, ringptrRead, ringptrWrite,10);
+//  memq -> attachBusSafety(memq, enableOthersOnbus,disableOthersOnbus);
+//  
+//  memq -> reset(memq);
   
-  memq -> reset(memq);
+
   
+  memqBegin(&memq,0, sizeof(data_t), 8);
+  memqSetMem(&memq, ramReader, ramWriter, ramEraser, 4);
+  memqAttachBusSafety(&memq, enableOthersOnbus,disableOthersOnbus);
+  memqSetMemPtr(&memq, ringptrRead, ringptrWrite,10);
+
+  memqReset(&memq);
+
 }
 
 void loop()
@@ -42,20 +51,20 @@ void loop()
   Serial.println(F("------------------------------"));
   if (cmd == 1)
   {
-    memq -> write(memq, (uint8_t*)&Data); //writing single data point
+    memqWrite(&memq, (uint8_t*)&Data); //writing single data point
     printBuffer((uint8_t*)&dataStruct, sizeof(dataStruct));
-    Serial.print(F("Counter : "));Serial.println(memq -> _ptrEventCounter);
+    Serial.print(F("Counter : "));Serial.println(memq._ptrEventCounter);
     Data.val1 += 2;
     Data.val2 += 2;
   }
   else if (cmd == 2)
   {
-    memq -> read(memq, (uint8_t*)&readBuf);
+    memqRead(&memq, (uint8_t*)&readBuf);
     printBuffer((uint8_t*)&readBuf, sizeof(readBuf));
     printBuffer((uint8_t*)&dataStruct, sizeof(dataStruct));
-    Serial.print(F("Counter : "));Serial.println(memq -> _ptrEventCounter);
+    Serial.print(F("Counter : "));Serial.println(memq._ptrEventCounter);
   }
-  memq -> saveMemQPtr(memq);
+  memqSaveMemPtr(&memq);
 }
 
 void ramReader(uint32_t addr, uint8_t *buf, uint16_t len)

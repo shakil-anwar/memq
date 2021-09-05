@@ -18,7 +18,7 @@ typedef struct payload_t
 
 payload_t pldWrite;
 payload_t pldRead;
-struct memq_t *memq;
+struct memq_t memq;
 
 void setup()
 {
@@ -26,12 +26,14 @@ void setup()
   Serial.println(F("Setup Done"));
   flash.begin();
   ringObj.begin(RING_BUF_LEN, sizeof(struct memqPtr_t)); //begin eeprom.
-  
-  memq = memqNew(0, sizeof(payload_t), 384);
-  memq -> setMemory(memq, memReader, memWriter, memEraser, 4096);
-  memq -> setPointer(memq, memPtrReader, memPtrWriter,10);
-  memq -> attachBusSafety(memq, enableOthersOnbus,disableOthersOnbus);  
-  memq -> reset(memq); 
+
+  memqBegin(&memq, 0, sizeof(payload_t), 384);
+  memqSetMem(&memq, memReader, memWriter, memEraser, 4096);
+  memqAttachBusSafety(&memq, enableOthersOnbus,disableOthersOnbus);
+  memqSetMemPtr(&memq, memPtrReader, memPtrWriter,10);
+
+  memqReset(&memq);
+
 }
 
 void loop()
@@ -41,19 +43,19 @@ void loop()
   if (cmd == 1)
   {
     generatePld(&pldWrite);
-    memq -> write(memq, (uint8_t*)&pldWrite); //writing single data point
+    memqWrite(&memq, (uint8_t*)&pldWrite); //writing single data point
     printPld(&pldWrite);
-    uint32_t curPage = (memq ->ringPtr._head)>>8;
+    uint32_t curPage = (memq.ringPtr._head)>>8;
     flash.dumpPage(curPage, pageBuf);
-    Serial.print(F("Counter : "));Serial.println(memq -> _ptrEventCounter);
+    Serial.print(F("Counter : "));Serial.println(memq._ptrEventCounter);
   }
   else if (cmd == 2)
   {
-    memq -> read(memq, (uint8_t*)&pldRead);
+    memqRead(&memq, (uint8_t*)&pldRead);
     printPld(&pldRead);
-    Serial.print(F("Counter : "));Serial.println(memq -> _ptrEventCounter);
+    Serial.print(F("Counter : "));Serial.println(memq._ptrEventCounter);
   }
-  memq -> saveMemQPtr(memq);
+  memqSaveMemPtr(&memq);
 }
 
 void memReader(uint32_t addr, uint8_t *buf, uint16_t len)
