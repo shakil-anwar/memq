@@ -117,11 +117,17 @@ void memqSetMemPtr(struct memq_t *memq, ringFun_t reader, ringFun_t writer, uint
       }
       memq->_memReader(readAddr,&data,1);
       headCount++;
+      if (memq->ringPtr._head == memq->ringPtr.willEraseAddr)
+      {
+        break;
+      }
     } while (data != 255);
   }
   memqUnlockBus(memq);
 
   memq->ringPtr._head = memq->ringPtr._head + (headCount-1) *memq->_packetLen;
+
+  
   // SerialPrintF(P("|H:")); SerialPrintlnU32(memq->ringPtr._head);
 // #if defined(MEMQ_DEBUG)
 //   SerialPrintF(P("memq RingPtr Head : "));
@@ -129,6 +135,19 @@ void memqSetMemPtr(struct memq_t *memq, ringFun_t reader, ringFun_t writer, uint
 //   SerialPrintF(P(" | Tail : "));
 //   SerialPrintlnU32(memq->ringPtr._tail);
 // #endif
+  if ((memq->ringPtr._head == memq->ringPtr.willEraseAddr) && (memq->ringPtr._head != memq->ringPtr._tail))
+  {
+    memq->ringPtr._isLock = true;
+    memqLockBus(memq);
+  }
+  else
+  {
+    memq->ringPtr._isLock = false;
+    memqUnlockBus(memq);
+  }
+
+  memq->_ptrWrite(&(memq->ringPtr)); //saving pointer in edge conditions
+
   memqPrintBeginLog(memq);
   memqPrintLog(memq);
 #if defined (BOARD_MEGA1284_V010)
@@ -374,6 +393,7 @@ uint8_t *memqRead(struct memq_t *memq, uint8_t *buf)
         // #endif
         memq->ringPtr.qState = NO_DATA;
         memqReadLog.isDataAvailable = false;
+        memq->ringPtr._isLock = false;
       }
 
       memqPrintReadLog(memq, &memqReadLog);
